@@ -1,6 +1,6 @@
 {
   "name": "asdbg-vscode",
-  "displayName": "AngelScript Debugger for VSCode",
+  "displayName": "AngelScript Debugger",
   "version": "0.1.0",
   "publisher": "sashi0034",
   "description": "AngelScript Debugger for VSCode",
@@ -65,59 +65,51 @@
   "activationEvents": [
     "onDebugResolve:mock",
     "onDebugDynamicConfigurations:mock",
-    "onCommand:extension.mock-debug.getProgramName"
+    "onCommand:asdbg-vscode.getProgramName"
   ],
   "workspaceTrust": {
     "request": "never"
   },
   "contributes": {
+    "languages": [
+      {
+        "id": "angelscript",
+        "extensions": [
+          ".as"
+        ]
+      }
+    ],
     "menus": {
-      "editor/title/run": [
+      "editor/title": [
         {
-          "command": "extension.mock-debug.runEditorContents",
-          "when": "resourceLangId == markdown",
-          "group": "navigation@1"
-        },
-        {
-          "command": "extension.mock-debug.debugEditorContents",
+          "command": "asdbg-vscode.debugEditorContents",
           "when": "resourceLangId == markdown",
           "group": "navigation@2"
         }
       ],
       "commandPalette": [
         {
-          "command": "extension.mock-debug.debugEditorContents",
-          "when": "resourceLangId == markdown"
-        },
-        {
-          "command": "extension.mock-debug.runEditorContents",
+          "command": "asdbg-vscode.debugEditorContents",
           "when": "resourceLangId == markdown"
         }
       ],
       "debug/variables/context": [
         {
-          "command": "extension.mock-debug.toggleFormatting",
+          "command": "asdbg-vscode.toggleFormatting",
           "when": "debugType == 'mock' && debugProtocolVariableMenuContext == 'simple'"
         }
       ]
     },
     "commands": [
       {
-        "command": "extension.mock-debug.debugEditorContents",
+        "command": "asdbg-vscode.debugEditorContents",
         "title": "Debug File",
         "category": "Mock Debug",
         "enablement": "!inDebugMode",
-        "icon": "$(debug-alt)"
+        "icon": "$(bug)"
       },
       {
-        "command": "extension.mock-debug.runEditorContents",
-        "title": "Run File",
-        "category": "Mock Debug",
-        "enablement": "!inDebugMode",
-        "icon": "$(play)"
-      },
-      {
-        "command": "extension.mock-debug.toggleFormatting",
+        "command": "asdbg-vscode.toggleFormatting",
         "title": "Toggle between decimal and hex formatting"
       }
     ],
@@ -232,7 +224,7 @@
           }
         ],
         "variables": {
-          "AskForProgramName": "extension.mock-debug.getProgramName"
+          "AskForProgramName": "asdbg-vscode.getProgramName"
         }
       }
     ]
