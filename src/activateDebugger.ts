@@ -49,42 +49,15 @@ export function activateDebugger(context: vscode.ExtensionContext) {
     const provider = new MockConfigurationProvider();
     context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('asdbg', provider));
 
-    // register a dynamic configuration provider for 'asdbg' debug type
-    context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('asdbg', {
-        provideDebugConfigurations(folder: WorkspaceFolder | undefined): ProviderResult<DebugConfiguration[]> {
-            return [
-                {
-                    name: "Dynamic Launch",
-                    request: "launch",
-                    type: "mock",
-                    program: "${file}"
-                },
-                {
-                    name: "Another Dynamic Launch",
-                    request: "launch",
-                    type: "mock",
-                    program: "${file}"
-                },
-                {
-                    name: "Mock Launch",
-                    request: "launch",
-                    type: "mock",
-                    program: "${file}"
-                }
-            ];
-        }
-    }, vscode.DebugConfigurationProviderTriggerKind.Dynamic));
-
     const factory = new InlineDebugAdapterFactory();
     context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('asdbg', factory));
 
     // override VS Code's default implementation of the debug hover
 
-    // FIXME: 'angelscript' にするとホバーでない
     context.subscriptions.push(vscode.languages.registerEvaluatableExpressionProvider('angelscript', {
         provideEvaluatableExpression(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.EvaluatableExpression> {
 
-            const variableRegexp = /^(?![0-9])[A-Za-z_][A-Za-z0-9_]*$/;
+            const variableRegexp = /(?<![\w$])(?![0-9])[\w$]+/g;
             const line = document.lineAt(position.line).text;
 
             let m: RegExpExecArray | null;
@@ -108,9 +81,8 @@ export function activateDebugger(context: vscode.ExtensionContext) {
 
             for (let l = viewport.start.line; l <= context.stoppedLocation.end.line; l++) {
                 const line = document.lineAt(l);
-                const regExp = /^(?![0-9])[A-Za-z_][A-Za-z0-9_]*$/;
+                const regExp = /(?<![\w$])(?![0-9])[\w$]+/g;
                 let m: RegExpExecArray | null;
-                ;
                 do {
                     m = regExp.exec(line.text);
                     if (m) {
