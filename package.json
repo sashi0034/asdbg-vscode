@@ -63,9 +63,6 @@
   "main": "./dist/extension.js",
   "browser": "./dist/web-extension.js",
   "activationEvents": [
-    "onDebugResolve:mock",
-    "onDebugDynamicConfigurations:mock",
-    "onCommand:asdbg-vscode.getProgramName"
   ],
   "workspaceTrust": {
     "request": "never"
@@ -83,20 +80,20 @@
       "editor/title": [
         {
           "command": "asdbg-vscode.debugEditorContents",
-          "when": "resourceLangId == markdown",
+          "when": "resourceLangId == angelscript",
           "group": "navigation@2"
         }
       ],
       "commandPalette": [
         {
           "command": "asdbg-vscode.debugEditorContents",
-          "when": "resourceLangId == markdown"
+          "when": "resourceLangId == angelscript"
         }
       ],
       "debug/variables/context": [
         {
           "command": "asdbg-vscode.toggleFormatting",
-          "when": "debugType == 'mock' && debugProtocolVariableMenuContext == 'simple'"
+          "when": "debugType == 'asdbg' && debugProtocolVariableMenuContext == 'simple'"
         }
       ]
     },
@@ -104,7 +101,7 @@
       {
         "command": "asdbg-vscode.debugEditorContents",
         "title": "Debug File",
-        "category": "Mock Debug",
+        "category": "AngelScript Debug",
         "enablement": "!inDebugMode",
         "icon": "$(bug)"
       },
@@ -115,16 +112,16 @@
     ],
     "breakpoints": [
       {
-        "language": "markdown"
+        "language": "angelscript"
       }
     ],
     "debuggers": [
       {
-        "type": "mock",
+        "type": "asdbg",
         "languages": [
-          "markdown"
+          "angelscript"
         ],
-        "label": "Mock Debug",
+        "label": "AngelScript Debug",
         "program": "./out/debugAdapter.js",
         "runtime": "node",
         "configurationAttributes": {
@@ -203,7 +200,7 @@
         },
         "initialConfigurations": [
           {
-            "type": "mock",
+            "type": "asdbg",
             "request": "launch",
             "name": "Ask for file name",
             "program": "${workspaceFolder}/${command:AskForProgramName}",
@@ -212,10 +209,10 @@
         ],
         "configurationSnippets": [
           {
-            "label": "Mock Debug: Launch",
-            "description": "A new configuration for 'debugging' a user selected markdown file.",
+            "label": "AngelScript Debug: Launch",
+            "description": "A new configuration for 'debugging' a user selected AngelScript file.",
             "body": {
-              "type": "mock",
+              "type": "asdbg",
               "request": "launch",
               "name": "Ask for file name",
               "program": "^\"\\${workspaceFolder}/\\${command:AskForProgramName}\"",

@@ -22,7 +22,7 @@ export function activateMockDebug(context: vscode.ExtensionContext, factory?: vs
             }
             if (targetResource) {
                 vscode.debug.startDebugging(undefined, {
-                    type: 'mock',
+                    type: 'asdbg',
                     name: 'Debug File',
                     request: 'launch',
                     program: targetResource.fsPath,
@@ -45,12 +45,12 @@ export function activateMockDebug(context: vscode.ExtensionContext, factory?: vs
         });
     }));
 
-    // register a configuration provider for 'mock' debug type
+    // register a configuration provider for 'asdbg' debug type
     const provider = new MockConfigurationProvider();
-    context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('mock', provider));
+    context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('asdbg', provider));
 
-    // register a dynamic configuration provider for 'mock' debug type
-    context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('mock', {
+    // register a dynamic configuration provider for 'asdbg' debug type
+    context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('asdbg', {
         provideDebugConfigurations(folder: WorkspaceFolder | undefined): ProviderResult<DebugConfiguration[]> {
             return [
                 {
@@ -78,7 +78,7 @@ export function activateMockDebug(context: vscode.ExtensionContext, factory?: vs
     if (!factory) {
         factory = new InlineDebugAdapterFactory();
     }
-    context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('mock', factory));
+    context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('asdbg', factory));
     // if ('dispose' in factory) {
     // 	context.subscriptions.push(factory);
     // }
@@ -148,7 +148,7 @@ class MockConfigurationProvider implements vscode.DebugConfigurationProvider {
         if (!config.type && !config.request && !config.name) {
             const editor = vscode.window.activeTextEditor;
             if (editor && editor.document.languageId === 'markdown') {
-                config.type = 'mock';
+                config.type = 'asdbg';
                 config.name = 'Launch';
                 config.request = 'launch';
                 config.program = '${file}';
