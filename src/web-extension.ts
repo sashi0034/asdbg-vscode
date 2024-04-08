@@ -9,10 +9,10 @@
  */
 
 import * as vscode from 'vscode';
-import { activateMockDebug } from './activateMockDebug';
+import { activateDebugger } from './activateDebugger';
 
 export function activate(context: vscode.ExtensionContext) {
-	activateMockDebug(context);	// activateMockDebug without 2nd argument launches the Debug Adapter "inlined"
+	activateDebugger(context);	// activateMockDebug without 2nd argument launches the Debug Adapter "inlined"
 }
 
 export function deactivate() {

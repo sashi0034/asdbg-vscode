@@ -12,7 +12,7 @@ import {WorkspaceFolder, DebugConfiguration, ProviderResult, CancellationToken} 
 import {MockDebugSession} from './mockDebug';
 import {FileAccessor} from './mockRuntime';
 
-export function activateMockDebug(context: vscode.ExtensionContext, factory?: vscode.DebugAdapterDescriptorFactory) {
+export function activateDebugger(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('asdbg-vscode.debugEditorContents', (resource: vscode.Uri) => {
@@ -75,24 +75,20 @@ export function activateMockDebug(context: vscode.ExtensionContext, factory?: vs
         }
     }, vscode.DebugConfigurationProviderTriggerKind.Dynamic));
 
-    if (!factory) {
-        factory = new InlineDebugAdapterFactory();
-    }
+    const factory = new InlineDebugAdapterFactory();
     context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('asdbg', factory));
-    // if ('dispose' in factory) {
-    // 	context.subscriptions.push(factory);
-    // }
 
     // override VS Code's default implementation of the debug hover
-    // here we match only Mock "variables", that are words starting with an '$'
-    context.subscriptions.push(vscode.languages.registerEvaluatableExpressionProvider('markdown', {
+
+    // FIXME: 'angelscript' にするとホバーでない
+    context.subscriptions.push(vscode.languages.registerEvaluatableExpressionProvider('angelscript', {
         provideEvaluatableExpression(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.EvaluatableExpression> {
 
-            const VARIABLE_REGEXP = /\$[a-z][a-z0-9]*/ig;
+            const variableRegexp = /^(?![0-9])[A-Za-z_][A-Za-z0-9_]*$/;
             const line = document.lineAt(position.line).text;
 
             let m: RegExpExecArray | null;
-            while (m = VARIABLE_REGEXP.exec(line)) {
+            while (m = variableRegexp.exec(line)) {
                 const varRange = new vscode.Range(position.line, m.index, position.line, m.index + m[0].length);
 
                 if (varRange.contains(position)) {
@@ -104,7 +100,7 @@ export function activateMockDebug(context: vscode.ExtensionContext, factory?: vs
     }));
 
     // override VS Code's default implementation of the "inline values" feature"
-    context.subscriptions.push(vscode.languages.registerInlineValuesProvider('markdown', {
+    context.subscriptions.push(vscode.languages.registerInlineValuesProvider('angelscript', {
 
         provideInlineValues(document: vscode.TextDocument, viewport: vscode.Range, context: vscode.InlineValueContext): vscode.ProviderResult<vscode.InlineValue[]> {
 
@@ -112,9 +108,11 @@ export function activateMockDebug(context: vscode.ExtensionContext, factory?: vs
 
             for (let l = viewport.start.line; l <= context.stoppedLocation.end.line; l++) {
                 const line = document.lineAt(l);
-                var regExp = /\$([a-z][a-z0-9]*)/ig;	// variables are words starting with '$'
+                const regExp = /^(?![0-9])[A-Za-z_][A-Za-z0-9_]*$/;
+                let m: RegExpExecArray | null;
+                ;
                 do {
-                    var m = regExp.exec(line.text);
+                    m = regExp.exec(line.text);
                     if (m) {
                         const varName = m[1];
                         const varRange = new vscode.Range(l, m.index, l, m.index + varName.length);
@@ -147,7 +145,7 @@ class MockConfigurationProvider implements vscode.DebugConfigurationProvider {
         // if launch.json is missing or empty
         if (!config.type && !config.request && !config.name) {
             const editor = vscode.window.activeTextEditor;
-            if (editor && editor.document.languageId === 'markdown') {
+            if (editor && editor.document.languageId === 'angelscript') {
                 config.type = 'asdbg';
                 config.name = 'Launch';
                 config.request = 'launch';
