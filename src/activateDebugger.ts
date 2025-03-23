@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { WorkspaceFolder, DebugConfiguration, ProviderResult, CancellationToken } from 'vscode';
-import { FileAccessor } from './mockRuntime';
 import { AsdbgSession } from "./asdbgSession";
 
 export function activateDebugger(context: vscode.ExtensionContext) {
@@ -133,8 +132,9 @@ class AsdbgConfigurationProvider implements vscode.DebugConfigurationProvider {
     }
 }
 
-export const workspaceFileAccessor: FileAccessor = {
+export const workspaceFileAccessor = {
     isWindows: typeof process !== 'undefined' && process.platform === 'win32',
+
     async readFile(path: string): Promise<Uint8Array> {
         let uri: vscode.Uri;
         try {
@@ -145,6 +145,7 @@ export const workspaceFileAccessor: FileAccessor = {
 
         return await vscode.workspace.fs.readFile(uri);
     },
+
     async writeFile(path: string, contents: Uint8Array) {
         await vscode.workspace.fs.writeFile(pathToUri(path), contents);
     }
