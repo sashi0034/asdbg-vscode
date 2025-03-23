@@ -5,6 +5,7 @@ import {
     Thread
 } from "@vscode/debugadapter";
 import { DebugProtocol } from "@vscode/debugprotocol";
+import * as net from 'net';
 
 const mainThreadId: number = 1;
 
@@ -74,6 +75,30 @@ export class AsdbgSession extends LoggingDebugSession {
 
         this.sendResponse(response);
         this.sendEvent(new InitializedEvent());
+
+        // TODO
+        const server = net.createServer((socket: net.Socket) => {
+            socket.on('data', (data: Buffer) => {
+                const msg = data.toString().trim();
+                console.log(`Client says: ${msg}`);
+
+                if (msg === 'PING') {
+                    socket.write('PONG\n');
+                } else if (msg === 'HELLO') {
+                    socket.write('Hello, client!\n');
+                } else {
+                    socket.write('Unknown command\n');
+                }
+            });
+
+            socket.on('end', () => {
+                console.log('Client disconnected');
+            });
+        });
+
+        server.listen(4712, () => {
+            console.log('Server listening on port 4712');
+        });
     }
 
     protected attachRequest(response: DebugProtocol.AttachResponse, args: DebugProtocol.AttachRequestArguments, request?: DebugProtocol.Request) {
