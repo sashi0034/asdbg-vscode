@@ -50,6 +50,8 @@ export function activateDebugger(context: vscode.ExtensionContext) {
 
     // override VS Code's default implementation of the debug hover
 
+    // const session: AsdbgSession = factory.session;
+
     context.subscriptions.push(vscode.languages.registerEvaluatableExpressionProvider('angelscript', {
         provideEvaluatableExpression(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.EvaluatableExpression> {
 

@@ -6,7 +6,8 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}"
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"${workspaceFolder}/mock_game"
 			],
 			"outFiles": [
 				"${workspaceFolder}/dist/**/*.js"
@@ -20,7 +21,8 @@
 			"request": "launch",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionDevelopmentKind=web"
+				"--extensionDevelopmentKind=web",
+				"${workspaceFolder}/mock_game"
 			],
 			"outFiles": [
 				"${workspaceFolder}/dist/**/*.js"
