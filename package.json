@@ -63,9 +63,7 @@
   "main": "./dist/extension.js",
   "browser": "./dist/web-extension.js",
   "activationEvents": [
-    "onDebugResolve:asdbg",
-    "onDebugDynamicConfigurations:asdbg",
-    "onCommand:asdbg-vscode.getProgramName"
+    "onLanguage:angelscript"
   ],
   "workspaceTrust": {
     "request": "never"

@@ -1,11 +1,10 @@
 import * as vscode from 'vscode';
-import {WorkspaceFolder, DebugConfiguration, ProviderResult, CancellationToken} from 'vscode';
-import {FileAccessor} from './mockRuntime';
-import {AngelDebugSession} from "./angelDebugSession";
-import {MockDebugSession} from "./mockDebug";
+import { WorkspaceFolder, DebugConfiguration, ProviderResult, CancellationToken } from 'vscode';
+import { FileAccessor } from './mockRuntime';
+import { AngelDebugSession } from "./angelDebugSession";
+import { MockDebugSession } from "./mockDebug";
 
 export function activateDebugger(context: vscode.ExtensionContext) {
-
     context.subscriptions.push(
         vscode.commands.registerCommand('asdbg-vscode.debugEditorContents', (resource: vscode.Uri) => {
             let targetResource = resource;
@@ -38,11 +37,18 @@ export function activateDebugger(context: vscode.ExtensionContext) {
     }));
 
     // register a configuration provider for 'asdbg' debug type
-    const provider = new MockConfigurationProvider();
+    const provider = new AsdbgConfigurationProvider();
     context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('asdbg', provider));
 
     const factory = new InlineDebugAdapterFactory();
     context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('asdbg', factory));
+
+    vscode.debug.startDebugging(undefined, {
+        type: 'asdbg',
+        name: 'Debug File',
+        request: 'attach',
+        stopOnEntry: true
+    });
 
     // override VS Code's default implementation of the debug hover
 
@@ -98,7 +104,7 @@ export function activateDebugger(context: vscode.ExtensionContext) {
     }));
 }
 
-class MockConfigurationProvider implements vscode.DebugConfigurationProvider {
+class AsdbgConfigurationProvider implements vscode.DebugConfigurationProvider {
 
     /**
      * Massage a debug configuration just before a debug session is being launched,
@@ -118,11 +124,11 @@ class MockConfigurationProvider implements vscode.DebugConfigurationProvider {
             }
         }
 
-        if (!config.program) {
-            return vscode.window.showInformationMessage("Cannot find a program to debug").then(_ => {
-                return undefined;	// Abort launch
-            });
-        }
+        // if (!config.program) {
+        //     return vscode.window.showInformationMessage("Cannot find a program to debug").then(_ => {
+        //         return undefined;	// Abort launch
+        //     });
+        // }
 
         return config;
     }
@@ -159,11 +165,11 @@ class InlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory 
         return new vscode.DebugAdapterInlineImplementation(new AngelDebugSession(workspaceFileAccessor));
     }
 
-    a() {
-        return new AngelDebugSession(workspaceFileAccessor);
-    }
+    // a() {
+    //     return new AngelDebugSession(workspaceFileAccessor);
+    // }
 
-    d() {
-        return new MockDebugSession(workspaceFileAccessor);
-    }
+    // d() {
+    //     return new MockDebugSession(workspaceFileAccessor);
+    // }
 }

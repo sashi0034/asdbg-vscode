@@ -4,7 +4,7 @@ import {
     StoppedEvent,
     Thread
 } from "@vscode/debugadapter";
-import {DebugProtocol} from "@vscode/debugprotocol";
+import { DebugProtocol } from "@vscode/debugprotocol";
 
 const thread_1: number = 1;
 
@@ -14,7 +14,7 @@ export class AngelDebugSession extends LoggingDebugSession {
     public constructor(fileAccessor: any) {
         super('angel-debug.txt', fileAccessor);
 
-        // 1-index で行列を扱う
+        // 1-index として扱う
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
     }
@@ -39,8 +39,6 @@ export class AngelDebugSession extends LoggingDebugSession {
         response.body.supportsFunctionBreakpoints = true;
         response.body.supportsDelayedStackTraceLoading = true;
 
-        this.startProcess().catch(console.error);
-
         this.sendResponse(response);
         this.sendEvent(new InitializedEvent());
     }
@@ -58,17 +56,19 @@ export class AngelDebugSession extends LoggingDebugSession {
             this.breakpoints.set(args.source.path, args.breakpoints);
         }
 
+        this.dummyProcess().catch(console.error);
+
         this.sendResponse(response);
     }
 
-    private async startProcess() {
+    private async dummyProcess() {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         this.sendEvent(new StoppedEvent('止まります', thread_1));
     }
 
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
-        response.body = {threads: [new Thread(thread_1, "Thread"),]};
+        response.body = { threads: [new Thread(thread_1, "Thread"),] };
         this.sendResponse(response);
     }
 
