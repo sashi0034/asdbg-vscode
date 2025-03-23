@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { WorkspaceFolder, DebugConfiguration, ProviderResult, CancellationToken } from 'vscode';
 import { FileAccessor } from './mockRuntime';
-import { AngelDebugSession } from "./angelDebugSession";
-import { MockDebugSession } from "./mockDebug";
+import { AsdbgSession } from "./asdbgSession";
 
 export function activateDebugger(context: vscode.ExtensionContext) {
     context.subscriptions.push(
@@ -29,12 +28,12 @@ export function activateDebugger(context: vscode.ExtensionContext) {
         })
     );
 
-    context.subscriptions.push(vscode.commands.registerCommand('asdbg-vscode.getProgramName', config => {
-        return vscode.window.showInputBox({
-            placeHolder: "Please enter the name of a markdown file in the workspace folder",
-            value: "readme.md"
-        });
-    }));
+    // context.subscriptions.push(vscode.commands.registerCommand('asdbg-vscode.getProgramName', config => {
+    //     return vscode.window.showInputBox({
+    //         placeHolder: "Please enter the name of a markdown file in the workspace folder",
+    //         value: "readme.md"
+    //     });
+    // }));
 
     // register a configuration provider for 'asdbg' debug type
     const provider = new AsdbgConfigurationProvider();
@@ -160,16 +159,9 @@ function pathToUri(path: string) {
 }
 
 class InlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
+    public readonly session = new AsdbgSession(workspaceFileAccessor);
 
     createDebugAdapterDescriptor(_session: vscode.DebugSession): ProviderResult<vscode.DebugAdapterDescriptor> {
-        return new vscode.DebugAdapterInlineImplementation(new AngelDebugSession(workspaceFileAccessor));
+        return new vscode.DebugAdapterInlineImplementation(this.session);
     }
-
-    // a() {
-    //     return new AngelDebugSession(workspaceFileAccessor);
-    // }
-
-    // d() {
-    //     return new MockDebugSession(workspaceFileAccessor);
-    // }
 }

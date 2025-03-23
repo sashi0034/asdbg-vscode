@@ -8,13 +8,13 @@ import { DebugProtocol } from "@vscode/debugprotocol";
 
 const thread_1: number = 1;
 
-export class AngelDebugSession extends LoggingDebugSession {
+export class AsdbgSession extends LoggingDebugSession {
     private breakpoints: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
 
     public constructor(fileAccessor: any) {
         super('angel-debug.txt', fileAccessor);
 
-        // 1-index として扱う
+        // 1-index として扱うF
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
     }
