@@ -7,10 +7,14 @@ import {
 import { DebugProtocol } from "@vscode/debugprotocol";
 import * as net from 'net';
 
+// クライアントソケットを保持する配列
+const s_clients: net.Socket[] = [];
+
 const mainThreadId: number = 1;
 
 export class AsdbgSession extends LoggingDebugSession {
-    private breakpoints: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
+    // ブレイクポイントはファイルパスごとに配列で保持する
+    public breakpoints: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
 
     private _currentLine: number = 1;
     private _currentFile: string | undefined = undefined;
@@ -18,7 +22,7 @@ export class AsdbgSession extends LoggingDebugSession {
     public constructor(fileAccessor: any) {
         super('angel-debug.txt', fileAccessor);
 
-        // Here it is 1-index
+        // 1-index（行番号、カラム番号）に合わせる
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
     }
@@ -76,8 +80,13 @@ export class AsdbgSession extends LoggingDebugSession {
         this.sendResponse(response);
         this.sendEvent(new InitializedEvent());
 
-        // TODO
+        // ネットワークサーバの起動（ポート4712）
         const server = net.createServer((socket: net.Socket) => {
+            // 接続時、クライアントソケットを配列に追加
+            s_clients.push(socket);
+            console.log('Client connected');
+
+            // クライアントからのデータ受信時
             socket.on('data', (data: Buffer) => {
                 const msg = data.toString().trim();
                 console.log(`Client says: ${msg}`);
@@ -86,6 +95,9 @@ export class AsdbgSession extends LoggingDebugSession {
                     socket.write('PONG\n');
                 } else if (msg === 'HELLO') {
                     socket.write('Hello, client!\n');
+                } else if (msg === 'GET_BREAKPOINTS') {
+                    // ブレイクポイント要求時、現在のブレイクポイント情報を送信
+                    this.sendBreakpoints(socket);
                 } else {
                     socket.write('Unknown command\n');
                 }
@@ -93,6 +105,11 @@ export class AsdbgSession extends LoggingDebugSession {
 
             socket.on('end', () => {
                 console.log('Client disconnected');
+                // 切断したソケットを配列から削除
+                const index = s_clients.indexOf(socket);
+                if (index !== -1) {
+                    s_clients.splice(index, 1);
+                }
             });
         });
 
@@ -101,12 +118,31 @@ export class AsdbgSession extends LoggingDebugSession {
         });
     }
 
+    // ブレイクポイント情報を送信するヘルパー
+    private sendBreakpoints(socket: net.Socket): void {
+        let message = "BREAKPOINTS\n";
+        for (const [filepath, bps] of this.breakpoints.entries()) {
+            for (const bp of bps) {
+                // message += `${filepath},${bp.line},${bp.column}\n`;
+                message += `${filepath},${bp.line}\n`;
+            }
+        }
+
+        message += "END_BREAKPOINTS\n";
+        socket.write(message);
+        console.log('Sent breakpoints to client:\n' + message);
+    }
+
     protected attachRequest(response: DebugProtocol.AttachResponse, args: DebugProtocol.AttachRequestArguments, request?: DebugProtocol.Request) {
         super.attachRequest(response, args, request);
         this.sendResponse(response);
     }
 
     protected async setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments, request?: DebugProtocol.Request) {
+        if (args.source.path?.endsWith('.as') === false) {
+            return;
+        }
+
         console.log('Set breakpoints request received.');
         super.setBreakPointsRequest(response, args, request);
 
@@ -114,8 +150,13 @@ export class AsdbgSession extends LoggingDebugSession {
             this.breakpoints.set(args.source.path, args.breakpoints);
         }
 
-        // TODO: Implement breakpoint sender
+        // TODO: ブレイクポイント設定後の処理（例: ダミープロセスで一時停止）
         this.dummyProcess().catch(console.error);
+
+        // ブレイクポイント更新を接続中の全クライアントへ送信
+        for (const socket of s_clients) {
+            this.sendBreakpoints(socket);
+        }
 
         this.sendResponse(response);
     }
@@ -123,7 +164,7 @@ export class AsdbgSession extends LoggingDebugSession {
     private async dummyProcess() {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        // ブレークポイントの最初の場所に移動
+        // 最初のブレイクポイントの位置に移動
         const bpEntry = [...this.breakpoints.entries()][0];
         if (bpEntry) {
             this._currentFile = bpEntry[0];
@@ -131,16 +172,16 @@ export class AsdbgSession extends LoggingDebugSession {
             this._currentLine = firstBp.line;
         }
 
-        this.sendEvent(new StoppedEvent('ぶれいくぽいんと', mainThreadId));
+        this.sendEvent(new StoppedEvent('breakpoint', mainThreadId));
     }
 
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
-        response.body = { threads: [new Thread(mainThreadId, "Thread"),] };
+        response.body = { threads: [new Thread(mainThreadId, "Thread")] };
         this.sendResponse(response);
     }
 
     protected breakpointLocationsRequest(response: DebugProtocol.BreakpointLocationsResponse, args: DebugProtocol.BreakpointLocationsArguments, request?: DebugProtocol.Request): void {
-        // このファイルのどこにブレークポイントを設定できるかを返す
+        // このファイル内でブレイクポイントを設定できる箇所
         response.body = {
             breakpoints: [
                 {
@@ -186,8 +227,6 @@ export class AsdbgSession extends LoggingDebugSession {
     }
 
     protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
-        this._currentLine++;
-        this.sendEvent(new StoppedEvent('breakpoint', mainThreadId));
         this.sendResponse(response);
     }
 }

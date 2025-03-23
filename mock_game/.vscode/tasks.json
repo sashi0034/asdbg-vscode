@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build mock_engine",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "mock_engine.cpp",
+                "-static-libstdc++",
+                "-static-libgcc",
+                "-lws2_32",
+                "-g",
+                "-o",
+                "mock_engine.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        }
+    ]
+}

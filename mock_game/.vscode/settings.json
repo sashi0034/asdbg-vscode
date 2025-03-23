@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        ".fantomasignore": "ignore",
+        "*.vt": "verilog",
+        "*.unity": "yaml",
+        "*.v": "coq",
+        "*.miniml": "plaintext",
+        "*.dasc": "c",
+        "*.as": "angelscript",
+        "xstring": "cpp"
+    },
+}
