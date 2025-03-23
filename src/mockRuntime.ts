@@ -148,7 +148,6 @@ export class MockRuntime extends EventEmitter {
 	private namedException: string | undefined;
 	private otherExceptions = false;
 
-
 	constructor(private fileAccessor: FileAccessor) {
 		super();
 	}
