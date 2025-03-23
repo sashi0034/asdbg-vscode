@@ -11,6 +11,9 @@ const mainThreadId: number = 1;
 export class AsdbgSession extends LoggingDebugSession {
     private breakpoints: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
 
+    private _currentLine: number = 1;
+    private _currentFile: string | undefined = undefined;
+
     public constructor(fileAccessor: any) {
         super('angel-debug.txt', fileAccessor);
 
@@ -95,7 +98,15 @@ export class AsdbgSession extends LoggingDebugSession {
     private async dummyProcess() {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        this.sendEvent(new StoppedEvent('止まります', mainThreadId));
+        // ブレークポイントの最初の場所に移動
+        const bpEntry = [...this.breakpoints.entries()][0];
+        if (bpEntry) {
+            this._currentFile = bpEntry[0];
+            const firstBp = bpEntry[1][0];
+            this._currentLine = firstBp.line;
+        }
+
+        this.sendEvent(new StoppedEvent('ぶれいくぽいんと', mainThreadId));
     }
 
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
@@ -120,22 +131,38 @@ export class AsdbgSession extends LoggingDebugSession {
     }
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments, request?: DebugProtocol.Request) {
-        const filename = [...this.breakpoints.keys()][0];
         response.body = {
             stackFrames: [
                 {
                     id: 1,
-                    name: filename,
-                    line: 12,
+                    name: this._currentFile ?? 'unknown',
+                    line: this._currentLine,
                     column: 1,
                     source: {
-                        name: 'name=' + filename,
-                        path: filename
+                        name: this._currentFile ?? 'unknown',
+                        path: this._currentFile
                     }
                 }
             ]
         };
+        this.sendResponse(response);
+    }
 
+    protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
+        this._currentLine++;
+        this.sendEvent(new StoppedEvent('step', mainThreadId));
+        this.sendResponse(response);
+    }
+
+    protected stepInRequest(response: DebugProtocol.StepInResponse, args: DebugProtocol.StepInArguments): void {
+        this._currentLine++;
+        this.sendEvent(new StoppedEvent('step', mainThreadId));
+        this.sendResponse(response);
+    }
+
+    protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
+        this._currentLine++;
+        this.sendEvent(new StoppedEvent('breakpoint', mainThreadId));
         this.sendResponse(response);
     }
 }
