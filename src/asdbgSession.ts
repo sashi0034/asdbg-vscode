@@ -6,7 +6,7 @@ import {
 } from "@vscode/debugadapter";
 import { DebugProtocol } from "@vscode/debugprotocol";
 
-const thread_1: number = 1;
+const mainThreadId: number = 1;
 
 export class AsdbgSession extends LoggingDebugSession {
     private breakpoints: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
@@ -14,7 +14,7 @@ export class AsdbgSession extends LoggingDebugSession {
     public constructor(fileAccessor: any) {
         super('angel-debug.txt', fileAccessor);
 
-        // 1-index として扱うF
+        // Here it is 1-index
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
     }
@@ -24,15 +24,45 @@ export class AsdbgSession extends LoggingDebugSession {
 
         response.body = response.body || {};
 
+        // FIXME
+        // 構成完了通知（configurationDoneRequest）をサポートする
         response.body.supportsConfigurationDoneRequest = true;
+
+        // ホバー表示中に evaluateRequest を使用して式の評価ができる
         response.body.supportsEvaluateForHovers = true;
+
+        // ステップバック（逆方向ステップ実行）をサポートする
         response.body.supportsStepBack = true;
+
+        // データブレークポイント（変数の値の変更など）をサポートする
         response.body.supportsDataBreakpoints = true;
+
+        // コード補完（completionsRequest）をサポートする
         response.body.supportsCompletionsRequest = true;
+
+        // コード補完をトリガーする文字（例: ".", "["）
         response.body.completionTriggerCharacters = [".", "["];
+
+        // 実行中のリクエストをキャンセルできる（supportsCancelRequest）
         response.body.supportsCancelRequest = true;
+
+        // ブレークポイントが有効かどうかを問い合わせるためのリクエスト（breakpointLocationsRequest）をサポートする
         response.body.supportsBreakpointLocationsRequest = true;
+
+        // ステップインのターゲット（関数呼び出しのどれに入るか）を指定できる
         response.body.supportsStepInTargetsRequest = true;
+
+        // デバッガーがデバッグ対象プログラムの一時停止をサポートする（pause など）
+        response.body.supportSuspendDebuggee = true;
+
+        // デバッガーがデバッグ対象プログラムの終了をサポートする（terminate など）
+        response.body.supportTerminateDebuggee = true;
+
+        // 関数ブレークポイント（関数名に基づくブレーク）をサポートする
+        response.body.supportsFunctionBreakpoints = true;
+
+        // スタックトレースの遅延読み込み（必要になった時に取得）をサポートする
+        response.body.supportsDelayedStackTraceLoading = true;
 
         response.body.supportSuspendDebuggee = true;
         response.body.supportTerminateDebuggee = true;
@@ -56,6 +86,7 @@ export class AsdbgSession extends LoggingDebugSession {
             this.breakpoints.set(args.source.path, args.breakpoints);
         }
 
+        // TODO: Implement breakpoint sender
         this.dummyProcess().catch(console.error);
 
         this.sendResponse(response);
@@ -64,30 +95,47 @@ export class AsdbgSession extends LoggingDebugSession {
     private async dummyProcess() {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        this.sendEvent(new StoppedEvent('止まります', thread_1));
+        this.sendEvent(new StoppedEvent('止まります', mainThreadId));
     }
 
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
-        response.body = { threads: [new Thread(thread_1, "Thread"),] };
+        response.body = { threads: [new Thread(mainThreadId, "Thread"),] };
+        this.sendResponse(response);
+    }
+
+    protected breakpointLocationsRequest(response: DebugProtocol.BreakpointLocationsResponse, args: DebugProtocol.BreakpointLocationsArguments, request?: DebugProtocol.Request): void {
+        // このファイルのどこにブレークポイントを設定できるかを返す
+        response.body = {
+            breakpoints: [
+                {
+                    line: 4,
+                    column: 1,
+                    endLine: 4,
+                    endColumn: 1
+                }
+            ]
+        };
+
         this.sendResponse(response);
     }
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments, request?: DebugProtocol.Request) {
-        const p = [...this.breakpoints.keys()][0];
+        const filename = [...this.breakpoints.keys()][0];
         response.body = {
             stackFrames: [
                 {
                     id: 1,
-                    name: p,
-                    line: 1,
+                    name: filename,
+                    line: 12,
                     column: 1,
                     source: {
-                        name: p,
-                        path: p
+                        name: 'name=' + filename,
+                        path: filename
                     }
                 }
             ]
         };
+
         this.sendResponse(response);
     }
 }

@@ -3,29 +3,29 @@ import { WorkspaceFolder, DebugConfiguration, ProviderResult, CancellationToken 
 import { AsdbgSession } from "./asdbgSession";
 
 export function activateDebugger(context: vscode.ExtensionContext) {
-    context.subscriptions.push(
-        vscode.commands.registerCommand('asdbg-vscode.debugEditorContents', (resource: vscode.Uri) => {
-            let targetResource = resource;
-            if (!targetResource && vscode.window.activeTextEditor) {
-                targetResource = vscode.window.activeTextEditor.document.uri;
-            }
-            if (targetResource) {
-                vscode.debug.startDebugging(undefined, {
-                    type: 'asdbg',
-                    name: 'Debug File',
-                    request: 'attach',
-                    program: targetResource.fsPath,
-                    stopOnEntry: true
-                });
-            }
-        }),
-        vscode.commands.registerCommand('asdbg-vscode.toggleFormatting', (variable) => {
-            const ds = vscode.debug.activeDebugSession;
-            if (ds) {
-                ds.customRequest('toggleFormatting');
-            }
-        })
-    );
+    // context.subscriptions.push(
+    //     vscode.commands.registerCommand('asdbg-vscode.debugEditorContents', (resource: vscode.Uri) => {
+    //         let targetResource = resource;
+    //         if (!targetResource && vscode.window.activeTextEditor) {
+    //             targetResource = vscode.window.activeTextEditor.document.uri;
+    //         }
+    //         if (targetResource) {
+    //             vscode.debug.startDebugging(undefined, {
+    //                 type: 'asdbg',
+    //                 name: 'Debug File',
+    //                 request: 'attach',
+    //                 program: targetResource.fsPath,
+    //                 stopOnEntry: true
+    //             });
+    //         }
+    //     }),
+    //     vscode.commands.registerCommand('asdbg-vscode.toggleFormatting', (variable) => {
+    //         const ds = vscode.debug.activeDebugSession;
+    //         if (ds) {
+    //             ds.customRequest('toggleFormatting');
+    //         }
+    //     })
+    // );
 
     // context.subscriptions.push(vscode.commands.registerCommand('asdbg-vscode.getProgramName', config => {
     //     return vscode.window.showInputBox({
