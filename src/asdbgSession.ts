@@ -20,7 +20,7 @@ interface ScriptVariable {
 }
 
 export class AsdbgSession extends LoggingDebugSession {
-    // ブレイクポイントはファイルパスごとに配列で保持する
+    // Breakpoints are stored per file path as an array
     public breakpoints: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
 
     private readonly _clients: net.Socket[] = [];
@@ -32,7 +32,7 @@ export class AsdbgSession extends LoggingDebugSession {
     public constructor(fileAccessor: any) {
         super('angel-debug.txt', fileAccessor);
 
-        // 1-index（行番号、カラム番号）に合わせる
+        // Align with 1-based indexing (for lines and columns)
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
     }
@@ -43,45 +43,46 @@ export class AsdbgSession extends LoggingDebugSession {
         response.body = response.body || {};
 
         // FIXME
-        // 構成完了通知（configurationDoneRequest）をサポートする
+        // Support for configurationDoneRequest
         response.body.supportsConfigurationDoneRequest = true;
 
-        // ホバー表示中に evaluateRequest を使用して式の評価ができる
+        // Allow evaluating expressions via evaluateRequest while hovering
         response.body.supportsEvaluateForHovers = true;
 
-        // ステップバック（逆方向ステップ実行）をサポートする
+        // Support step back (reverse execution)
         response.body.supportsStepBack = true;
 
-        // データブレークポイント（変数の値の変更など）をサポートする
+        // Support data breakpoints (e.g., when variable values change)
         response.body.supportsDataBreakpoints = true;
 
-        // コード補完（completionsRequest）をサポートする
+        // Support code completions via completionsRequest
         response.body.supportsCompletionsRequest = true;
 
-        // コード補完をトリガーする文字（例: ".", "["）
+        // Characters that trigger code completion (e.g., ".", "[")
         response.body.completionTriggerCharacters = [".", "["];
 
-        // 実行中のリクエストをキャンセルできる（supportsCancelRequest）
+        // Allow cancellation of ongoing requests (supportsCancelRequest)
         response.body.supportsCancelRequest = true;
 
-        // ブレークポイントが有効かどうかを問い合わせるためのリクエスト（breakpointLocationsRequest）をサポートする
+        // Support for querying valid breakpoint locations via breakpointLocationsRequest
         response.body.supportsBreakpointLocationsRequest = true;
 
-        // ステップインのターゲット（関数呼び出しのどれに入るか）を指定できる
+        // Support step-in targets (specifying which function call to step into)
         response.body.supportsStepInTargetsRequest = true;
 
-        // デバッガーがデバッグ対象プログラムの一時停止をサポートする（pause など）
+        // Support suspending the debuggee (e.g., pause)
         response.body.supportSuspendDebuggee = true;
 
-        // デバッガーがデバッグ対象プログラムの終了をサポートする（terminate など）
+        // Support terminating the debuggee (e.g., terminate)
         response.body.supportTerminateDebuggee = true;
 
-        // 関数ブレークポイント（関数名に基づくブレーク）をサポートする
+        // Support function breakpoints (breakpoints based on function names)
         response.body.supportsFunctionBreakpoints = true;
 
-        // スタックトレースの遅延読み込み（必要になった時に取得）をサポートする
+        // Support delayed loading of stack traces (load only when needed)
         response.body.supportsDelayedStackTraceLoading = true;
 
+        // Redundant assignments (safe to keep or remove)
         response.body.supportSuspendDebuggee = true;
         response.body.supportTerminateDebuggee = true;
         response.body.supportsFunctionBreakpoints = true;
@@ -90,13 +91,13 @@ export class AsdbgSession extends LoggingDebugSession {
         this.sendResponse(response);
         this.sendEvent(new InitializedEvent());
 
-        // ネットワークサーバの起動（ポート4712）
+        // Start network server (port 4712)
         const server = net.createServer((socket: net.Socket) => {
-            // 接続時、クライアントソケットを配列に追加
+            // Add client socket to the array upon connection
             this._clients.push(socket);
             console.log('Client connected');
 
-            // クライアントからのデータ受信時
+            // When data is received from the client
             socket.on('data', (data: Buffer) => {
                 const messages = data.toString().split('\n');
                 while (messages.length > 0) {
@@ -107,7 +108,7 @@ export class AsdbgSession extends LoggingDebugSession {
             socket.on('end', () => {
                 console.log('Client disconnected');
 
-                // 切断したソケットを配列から削除
+                // Remove disconnected socket from the array
                 const index = this._clients.indexOf(socket);
                 if (index !== -1) {
                     this._clients.splice(index, 1);
@@ -128,7 +129,7 @@ export class AsdbgSession extends LoggingDebugSession {
             return;
         }
         else if (method === 'GET_BREAKPOINTS') {
-            // ブレイクポイント要求時、現在のブレイクポイント情報を送信
+            // Send breakpoints to the client
             this.sendBreakpoints(socket);
         } else if (method === 'STOP') {
             // ```
@@ -180,7 +181,7 @@ export class AsdbgSession extends LoggingDebugSession {
         }
     }
 
-    // ブレイクポイント情報を送信するヘルパー
+    // Send breakpoint information to the C++ client
     private sendBreakpoints(socket: net.Socket): void {
         let message = "BREAKPOINTS\n";
         for (const [filepath, bps] of this.breakpoints.entries()) {
@@ -212,7 +213,7 @@ export class AsdbgSession extends LoggingDebugSession {
             this.breakpoints.set(args.source.path, args.breakpoints);
         }
 
-        // ブレイクポイント更新を接続中の全クライアントへ送信
+        // Send breakpoint updates to all connected clients
         for (const socket of this._clients) {
             this.sendBreakpoints(socket);
         }
@@ -241,7 +242,7 @@ export class AsdbgSession extends LoggingDebugSession {
     //     this.sendResponse(response);
     // }
 
-    // VSCode がスタックトレースを要求したときに呼び出される
+    // This event function is called when VSCode requests a stack trace
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments, request?: DebugProtocol.Request) {
         const filepath = this._currentBreakpoint?.filepath ?? 'unknown';
         response.body = {
