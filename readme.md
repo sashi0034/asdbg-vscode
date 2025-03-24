@@ -5,7 +5,7 @@ This experimental project is based on [vscode-mock-debug](https://github.com/mic
 # Currently Implemented
 
 - Run the mock engine and hit breakpoints set in script files
-- Display values of basic variables
+- Display values of placeholder variables
 - Support for Step Over, Continue, etc.
 
 ![screenshot](image.png)
