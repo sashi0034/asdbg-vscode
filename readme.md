@@ -31,4 +31,4 @@ This experimental project is based on [vscode-mock-debug](https://github.com/mic
 # Goal
 - Embed into the Language Server
 - Provide a user-friendly, header-only library `asdbg_backend.hpp` for easy integration
-  - Ideally support C++11 and make it compatible with any platform
+  - Ideally support C++11 or C++14 and make it compatible with any platform
