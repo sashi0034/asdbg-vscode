@@ -1,0 +1,2 @@
+^C:\DEV\LANG\AS-SANDBOX\ANGELSCRIPT\ANGELSCRIPT\SOURCE\AS_CALLFUNC_X64_MSVC_ASM.ASM
+ml64.exe /c  /nologo /Fo"Debug\as_callfunc_x64_msvc_asm.obj" /W3 /Zi /Ta "C:\dev\lang\as-sandbox\angelscript\angelscript\source\\as_callfunc_x64_msvc_asm.asm"

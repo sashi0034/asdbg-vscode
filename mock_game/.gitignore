@@ -1,1 +1,5 @@
-mock_engine.exe
+*.exe
+*.o
+*.a
+*.so
+*.so.*
