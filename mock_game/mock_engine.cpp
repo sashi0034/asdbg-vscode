@@ -14,9 +14,11 @@ int g_scriptLine{1};
 int g_frameCOunt{};
 
 void LineCallback() {
-    if (g_asdbg.IsBreakpoint(g_filename, g_scriptLine)) {
+    if (const auto bp = g_asdbg.FindBreakpoint(g_filename, g_scriptLine)) {
         std::cout << "Breakpoint hit: " << g_filename << ", " << g_scriptLine
                   << "\n";
+
+        g_asdbg.TriggerBreakpoint(*bp);
     }
 }
 

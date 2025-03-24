@@ -91,14 +91,13 @@ export class AsdbgSession extends LoggingDebugSession {
                 const msg = data.toString().trim();
                 console.log(`Client says: ${msg}`);
 
-                if (msg === 'PING') {
-                    socket.write('PONG\n');
-                } else if (msg === 'HELLO') {
-                    socket.write('Hello, client!\n');
-                } else if (msg === 'GET_BREAKPOINTS') {
+                if (msg === 'GET_BREAKPOINTS') {
                     // ブレイクポイント要求時、現在のブレイクポイント情報を送信
                     this.sendBreakpoints(socket);
-                } else {
+                } else if (msg.startsWith('STOP')) {
+                    this.sendEvent(new StoppedEvent('breakpoint', mainThreadId));
+                }
+                else {
                     socket.write('Unknown command\n');
                 }
             });
@@ -172,7 +171,7 @@ export class AsdbgSession extends LoggingDebugSession {
             this._currentLine = firstBp.line;
         }
 
-        this.sendEvent(new StoppedEvent('breakpoint', mainThreadId));
+        // this.sendEvent(new StoppedEvent('breakpoint', mainThreadId));
     }
 
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {

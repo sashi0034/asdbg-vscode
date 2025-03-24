@@ -1,6 +1,8 @@
 #ifndef ASDBG_BACKEND_H
 #define ASDBG_BACKEND_H
 
+#include <atomic>
+#include <cstddef>
 #include <cstring>
 #include <iostream>
 #include <mutex>
@@ -229,6 +231,12 @@ struct Breakpoint {
     int line;
 };
 
+enum class DebugCommand : std::uint8_t {
+    Nothing,
+    StepOver,
+    StepIn,
+    Continue,
+};
 class AsdbgBackend {
   public:
     AsdbgBackend() = default;
@@ -254,7 +262,8 @@ class AsdbgBackend {
         }
     }
 
-    bool IsBreakpoint(const std::string &filename, int line) {
+    /// @return Breakpoint if found, otherwise nullptr
+    const Breakpoint *FindBreakpoint(const std::string &filename, int line) {
         std::lock_guard<std::mutex> lock{m_breankpointMutex};
 
         for (const auto &bp : m_breankpointList) {
@@ -262,11 +271,30 @@ class AsdbgBackend {
                 detail::EndWith(bp.filepath,
                                 filename) // FIXME: Consider relative paths
             ) {
-                return true;
+                return &bp;
             }
         }
 
-        return false;
+        return nullptr;
+    }
+
+    DebugCommand TriggerBreakpoint(const Breakpoint &bp) {
+        std::string request = "STOP\n";
+        request += bp.filepath + "," + std::to_string(bp.line) + "\n";
+        simple_socket::send_data(m_socket, request.c_str(), request.size());
+
+        DebugCommand cmd{DebugCommand::Nothing};
+        while (true) {
+            cmd = m_debugCommand.load();
+            if (cmd != DebugCommand::Nothing) {
+                m_debugCommand.store(DebugCommand::Nothing);
+                break;
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
+        return cmd;
     }
 
     ~AsdbgBackend() { Shutdown(); }
@@ -275,6 +303,7 @@ class AsdbgBackend {
     int m_socket{-1};
     std::mutex m_breankpointMutex{};
     std::vector<Breakpoint> m_breankpointList{};
+    std::atomic<DebugCommand> m_debugCommand{DebugCommand::Nothing};
 
     void ReqestBreakpoints() {
         std::string request = "GET_BREAKPOINTS\n";
@@ -302,6 +331,8 @@ class AsdbgBackend {
 
                 while (!messageQueue.IsEmpty()) {
                     if (ParseBeakpoints(messageQueue)) {
+                        continue;
+                    } else if (ParseCommand(messageQueue)) {
                         continue;
                     } else {
                         std::cout
@@ -358,7 +389,30 @@ class AsdbgBackend {
 
         return true;
     }
-};
+
+    bool ParseCommand(detail::MessageQueue &queue) {
+        if (queue.Peek() != "COMMAND")
+            return false;
+
+        queue.Pop();
+
+        if (queue.IsEmpty())
+            return false;
+
+        const auto next = queue.Pop();
+        if (next == "STEP_OVER") {
+            m_debugCommand.store(DebugCommand::StepOver);
+        } else if (next == "STEP_IN") {
+            m_debugCommand.store(DebugCommand::StepIn);
+        } else if (next == "CONTINUE") {
+            m_debugCommand.store(DebugCommand::Continue);
+        } else {
+            std::cerr << "Unknown command: " << next.data() << std::endl;
+        }
+
+        return true;
+    }
+}; // class AsdbgBackend
 
 } // namespace asdbg
 
