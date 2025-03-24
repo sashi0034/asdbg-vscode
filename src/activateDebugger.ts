@@ -73,6 +73,8 @@ export function activateDebugger(context: vscode.ExtensionContext) {
     // override VS Code's default implementation of the "inline values" feature"
     context.subscriptions.push(vscode.languages.registerInlineValuesProvider('angelscript', {
 
+        // TODO: Use information from Language server
+
         provideInlineValues(document: vscode.TextDocument, viewport: vscode.Range, context: vscode.InlineValueContext): vscode.ProviderResult<vscode.InlineValue[]> {
 
             const allValues: vscode.InlineValue[] = [];

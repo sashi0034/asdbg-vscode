@@ -250,4 +250,37 @@ export class AsdbgSession extends LoggingDebugSession {
 
         this.sendResponse(response);
     }
+
+    // protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments, request?: DebugProtocol.Request): void {
+
+    // }
+
+    protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments, request?: DebugProtocol.Request): void {
+        response.body = {
+            scopes: [
+                {
+                    name: "my_function",
+                    variablesReference: 1000, // FIXME
+                    expensive: false
+                }
+            ]
+        };
+
+        this.sendResponse(response);
+    }
+
+    protected variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments, request?: DebugProtocol.Request): void {
+        response.body = {
+            variables: [
+                {
+                    name: "player_life",
+                    value: "987",
+                    type: "int",
+                    variablesReference: 500 // FIXME
+                }
+            ]
+        };
+
+        this.sendResponse(response);
+    }
 }

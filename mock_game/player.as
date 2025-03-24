@@ -9,7 +9,10 @@ class Player {
 }
 
 void main() {
-    int player_life = 10;
+    int initial_player_life = 10;
+    int player_damage = 3;
+    int player_life = initial_player_life + player_damage; // player_life
+
     Player p = Player();
     p.life = player_life;
     p.x = 0;

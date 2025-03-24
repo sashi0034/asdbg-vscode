@@ -371,7 +371,10 @@ class AsdbgBackend {
 
             queue.Pop();
 
-            bool shouldReset = true;
+            {
+                std::lock_guard<std::mutex> lock{m_breankpointMutex};
+                m_breankpointList.clear();
+            }
 
             while (!queue.IsEmpty()) {
                 const auto next = queue.Pop();
@@ -394,12 +397,6 @@ class AsdbgBackend {
                     const int lineNumber = std::stoi(line);
 
                     std::lock_guard<std::mutex> lock{m_breankpointMutex};
-
-                    if (shouldReset) {
-                        m_breankpointList.clear();
-                        shouldReset = false;
-                    }
-
                     m_breankpointList.push_back(
                         Breakpoint{filepath, lineNumber});
 
