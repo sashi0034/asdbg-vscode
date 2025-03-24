@@ -1,6 +1,7 @@
 #ifndef ASDBG_BACKEND_H
 #define ASDBG_BACKEND_H
 
+#include <cstring>
 #include <iostream>
 #include <mutex>
 #include <sstream>
@@ -106,21 +107,23 @@ class string_view {
         return string_view(m_data + pos, len);
     }
 
-    bool starts_with(const string_view &prefix) const {
-        if (prefix.size() > size())
-            return false;
+    // Since C++20
+    // bool starts_with(const string_view &prefix) const {
+    //     if (prefix.size() > size())
+    //         return false;
 
-        return std::memcmp(data(), prefix.data(), prefix.size()) == 0;
-    }
+    //     return std::memcmp(data(), prefix.data(), prefix.size()) == 0;
+    // }
 
-    bool ends_with(const string_view &suffix) const {
-        if (suffix.size() > size())
-            return false;
+    // bool ends_with(const string_view &suffix) const {
+    //     if (suffix.size() > size())
+    //         return false;
 
-        return std::memcmp(data() + size() - suffix.size(), suffix.data(),
-                           suffix.size()) == 0;
-    }
+    //     return std::memcmp(data() + size() - suffix.size(), suffix.data(),
+    //                        suffix.size()) == 0;
+    // }
 
+    // Since C++17
     size_type find(char ch, size_type pos = 0) const {
         if (pos >= m_size)
             return npos;
@@ -183,6 +186,14 @@ std::vector<string_view> SplitLines(string_view data) {
     return lines;
 }
 
+bool EndWith(string_view str, string_view suffix) {
+    if (suffix.size() > str.size())
+        return false;
+
+    return std::memcmp(str.data() + str.size() - suffix.size(), suffix.data(),
+                       suffix.size()) == 0;
+}
+
 class MessageQueue {
   public:
     MessageQueue(string_view data) : m_pos(0) { m_lines = SplitLines(data); }
@@ -214,13 +225,15 @@ class MessageQueue {
 // -----------------------------------------------
 
 struct Breakpoint {
-    std::string filename;
+    std::string filepath;
     int line;
 };
 
 class AsdbgBackend {
   public:
-    AsdbgBackend(std::atomic<bool> &running) {
+    AsdbgBackend() = default;
+
+    void Start(std::atomic<bool> &running) {
         simple_socket::init();
 
         m_socket = simple_socket::create_socket("127.0.0.1", 4712);
@@ -234,10 +247,32 @@ class AsdbgBackend {
         ReqestBreakpoints();
     }
 
-    ~AsdbgBackend() { simple_socket::cleanup(); }
+    void Shutdown() {
+        if (m_socket >= 0) {
+            simple_socket::close_socket(m_socket);
+            simple_socket::cleanup();
+        }
+    }
+
+    bool IsBreakpoint(const std::string &filename, int line) {
+        std::lock_guard<std::mutex> lock{m_breankpointMutex};
+
+        for (const auto &bp : m_breankpointList) {
+            if (bp.line == line &&
+                detail::EndWith(bp.filepath,
+                                filename) // FIXME: Consider relative paths
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    ~AsdbgBackend() { Shutdown(); }
 
   private:
-    int m_socket;
+    int m_socket{-1};
     std::mutex m_breankpointMutex{};
     std::vector<Breakpoint> m_breankpointList{};
 
