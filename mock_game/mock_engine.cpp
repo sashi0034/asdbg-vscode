@@ -8,23 +8,37 @@
 
 namespace {
 asdbg::AsdbgBackend g_asdbg{};
+asdbg::DebugCommand g_previousCommand{};
 
-std::string g_filename{"player.as"};
+std::string g_filename{"player.as"}; // This is not loaded, just a mock
 int g_scriptLine{1};
-int g_frameCOunt{};
+int g_frameCount{};
 
 void LineCallback() {
+    if (g_previousCommand == asdbg::DebugCommand::StepOver) {
+        const auto filepath = g_asdbg.GetAbsolutePath(g_filename);
+        g_previousCommand = g_asdbg.TriggerBreakpoint(
+            asdbg::Breakpoint{filepath, g_scriptLine});
+    }
+
+    if (g_previousCommand == asdbg::DebugCommand::StepIn) {
+        // FIXME: Implement step in (This is same as step over for now)
+        const auto filepath = g_asdbg.GetAbsolutePath(g_filename);
+        g_previousCommand = g_asdbg.TriggerBreakpoint(
+            asdbg::Breakpoint{filepath, g_scriptLine});
+    }
+
     if (const auto bp = g_asdbg.FindBreakpoint(g_filename, g_scriptLine)) {
         std::cout << "Breakpoint hit: " << g_filename << ", " << g_scriptLine
                   << "\n";
 
-        g_asdbg.TriggerBreakpoint(*bp);
+        g_previousCommand = g_asdbg.TriggerBreakpoint(*bp);
     }
 }
 
 void MockScriptEngine() {
-    while (g_frameCOunt < 10) {
-        g_frameCOunt++;
+    while (g_frameCount < 10 * 10) {
+        g_frameCount++;
 
         g_scriptLine++;
 
@@ -35,7 +49,7 @@ void MockScriptEngine() {
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        std::cout << "Frame: " << g_frameCOunt
+        std::cout << "Frame: " << g_frameCount
                   << ", Script line: " << g_scriptLine << "\n";
     }
 }

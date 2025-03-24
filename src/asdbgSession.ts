@@ -7,17 +7,20 @@ import {
 import { DebugProtocol } from "@vscode/debugprotocol";
 import * as net from 'net';
 
-// クライアントソケットを保持する配列
-const s_clients: net.Socket[] = [];
+const mainThreadId = 1;
 
-const mainThreadId: number = 1;
+interface ScriptBreakpoint {
+    filepath: string;
+    line: number;
+}
 
 export class AsdbgSession extends LoggingDebugSession {
     // ブレイクポイントはファイルパスごとに配列で保持する
     public breakpoints: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
 
-    private _currentLine: number = 1;
-    private _currentFile: string | undefined = undefined;
+    private readonly _clients: net.Socket[] = [];
+
+    private _currentBreakpoint: ScriptBreakpoint | undefined;
 
     public constructor(fileAccessor: any) {
         super('angel-debug.txt', fileAccessor);
@@ -83,31 +86,21 @@ export class AsdbgSession extends LoggingDebugSession {
         // ネットワークサーバの起動（ポート4712）
         const server = net.createServer((socket: net.Socket) => {
             // 接続時、クライアントソケットを配列に追加
-            s_clients.push(socket);
+            this._clients.push(socket);
             console.log('Client connected');
 
             // クライアントからのデータ受信時
             socket.on('data', (data: Buffer) => {
-                const msg = data.toString().trim();
-                console.log(`Client says: ${msg}`);
-
-                if (msg === 'GET_BREAKPOINTS') {
-                    // ブレイクポイント要求時、現在のブレイクポイント情報を送信
-                    this.sendBreakpoints(socket);
-                } else if (msg.startsWith('STOP')) {
-                    this.sendEvent(new StoppedEvent('breakpoint', mainThreadId));
-                }
-                else {
-                    socket.write('Unknown command\n');
-                }
+                this.handleSocketData(socket, data);
             });
 
             socket.on('end', () => {
                 console.log('Client disconnected');
+
                 // 切断したソケットを配列から削除
-                const index = s_clients.indexOf(socket);
+                const index = this._clients.indexOf(socket);
                 if (index !== -1) {
-                    s_clients.splice(index, 1);
+                    this._clients.splice(index, 1);
                 }
             });
         });
@@ -115,6 +108,41 @@ export class AsdbgSession extends LoggingDebugSession {
         server.listen(4712, () => {
             console.log('Server listening on port 4712');
         });
+
+        console.log('Debug adapter initialized!');
+    }
+
+    private handleSocketData(socket: net.Socket, data: Buffer) {
+        const message = data.toString().trim();
+        console.log(`Client says: ${message}`);
+
+        if (message === 'GET_BREAKPOINTS') {
+            // ブレイクポイント要求時、現在のブレイクポイント情報を送信
+            this.sendBreakpoints(socket);
+        } else if (message.startsWith('STOP')) {
+            // ```
+            // STOP
+            // filepath,line
+            // ```
+            const secondLine = message.split('\n')[1];
+            const [filepath, line] = secondLine?.split(',');
+            const lineNumber = line !== undefined ? parseInt(line, 10) : undefined;
+            if (filepath === undefined || lineNumber === undefined) {
+                console.log('Invalid STOP message received.');
+                return;
+            }
+
+            this._currentBreakpoint = {
+                filepath: filepath,
+                line: lineNumber
+            };
+
+            // Send message for VSCode to stop at the breakpoint
+            this.sendEvent(new StoppedEvent('breakpoint', mainThreadId));
+        }
+        else {
+            console.log('Unknown message received.');
+        }
     }
 
     // ブレイクポイント情報を送信するヘルパー
@@ -149,29 +177,12 @@ export class AsdbgSession extends LoggingDebugSession {
             this.breakpoints.set(args.source.path, args.breakpoints);
         }
 
-        // TODO: ブレイクポイント設定後の処理（例: ダミープロセスで一時停止）
-        this.dummyProcess().catch(console.error);
-
         // ブレイクポイント更新を接続中の全クライアントへ送信
-        for (const socket of s_clients) {
+        for (const socket of this._clients) {
             this.sendBreakpoints(socket);
         }
 
         this.sendResponse(response);
-    }
-
-    private async dummyProcess() {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // 最初のブレイクポイントの位置に移動
-        const bpEntry = [...this.breakpoints.entries()][0];
-        if (bpEntry) {
-            this._currentFile = bpEntry[0];
-            const firstBp = bpEntry[1][0];
-            this._currentLine = firstBp.line;
-        }
-
-        // this.sendEvent(new StoppedEvent('breakpoint', mainThreadId));
     }
 
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
@@ -179,53 +190,64 @@ export class AsdbgSession extends LoggingDebugSession {
         this.sendResponse(response);
     }
 
-    protected breakpointLocationsRequest(response: DebugProtocol.BreakpointLocationsResponse, args: DebugProtocol.BreakpointLocationsArguments, request?: DebugProtocol.Request): void {
-        // このファイル内でブレイクポイントを設定できる箇所
-        response.body = {
-            breakpoints: [
-                {
-                    line: 4,
-                    column: 1,
-                    endLine: 4,
-                    endColumn: 1
-                }
-            ]
-        };
+    // protected breakpointLocationsRequest(response: DebugProtocol.BreakpointLocationsResponse, args: DebugProtocol.BreakpointLocationsArguments, request?: DebugProtocol.Request): void {
+    //     // このファイル内でブレイクポイントを設定できる箇所
+    //     response.body = {
+    //         breakpoints: [
+    //             {
+    //                 line: 4,
+    //                 column: 1,
+    //                 endLine: 4,
+    //                 endColumn: 1
+    //             }
+    //         ]
+    //     };
 
-        this.sendResponse(response);
-    }
+    //     this.sendResponse(response);
+    // }
 
+    // VSCode がスタックトレースを要求したときに呼び出される
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments, request?: DebugProtocol.Request) {
+        const filepath = this._currentBreakpoint?.filepath ?? 'unknown';
         response.body = {
             stackFrames: [
                 {
                     id: 1,
-                    name: this._currentFile ?? 'unknown',
-                    line: this._currentLine,
+                    name: filepath,
+                    line: this._currentBreakpoint?.line ?? 0,
                     column: 1,
                     source: {
-                        name: this._currentFile ?? 'unknown',
-                        path: this._currentFile
+                        name: filepath,
+                        path: filepath
                     }
                 }
             ]
         };
+
         this.sendResponse(response);
     }
 
     protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-        this._currentLine++;
-        this.sendEvent(new StoppedEvent('step', mainThreadId));
+        this._clients.forEach(client => {
+            client.write('COMMAND\nSTEP_OVER\n');
+        });
+
         this.sendResponse(response);
     }
 
     protected stepInRequest(response: DebugProtocol.StepInResponse, args: DebugProtocol.StepInArguments): void {
-        this._currentLine++;
-        this.sendEvent(new StoppedEvent('step', mainThreadId));
+        this._clients.forEach(client => {
+            client.write('COMMAND\nSTEP_IN\n');
+        });
+
         this.sendResponse(response);
     }
 
     protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
+        this._clients.forEach(client => {
+            client.write('COMMAND\nCONTINUE\n');
+        });
+
         this.sendResponse(response);
     }
 }

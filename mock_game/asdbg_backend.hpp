@@ -70,9 +70,15 @@ inline int receive_data(int sock, char *buffer, size_t buffer_size) {
 // -----------------------------------------------
 
 #if __cplusplus >= 201703L
+
+#define ASDBG_NODISCARD [[nodiscard]]
+
 #include <string_view>
 using string_view = std::string_view;
+
 #else
+
+#define ASDBG_NODISCARD
 class string_view {
   public:
     using size_type = std::size_t;
@@ -263,6 +269,7 @@ class AsdbgBackend {
     }
 
     /// @return Breakpoint if found, otherwise nullptr
+    ASDBG_NODISCARD
     const Breakpoint *FindBreakpoint(const std::string &filename, int line) {
         std::lock_guard<std::mutex> lock{m_breankpointMutex};
 
@@ -278,6 +285,19 @@ class AsdbgBackend {
         return nullptr;
     }
 
+    ASDBG_NODISCARD
+    std::string GetAbsolutePath(const std::string &filename) { // FIXME!
+        // TODO
+        for (const auto &bp : m_breankpointList) {
+            if (detail::EndWith(bp.filepath, filename)) {
+                return bp.filepath;
+            }
+        }
+
+        return filename;
+    }
+
+    ASDBG_NODISCARD
     DebugCommand TriggerBreakpoint(const Breakpoint &bp) {
         std::string request = "STOP\n";
         request += bp.filepath + "," + std::to_string(bp.line) + "\n";
@@ -351,6 +371,8 @@ class AsdbgBackend {
 
             queue.Pop();
 
+            bool shouldReset = true;
+
             while (!queue.IsEmpty()) {
                 const auto next = queue.Pop();
                 if (next == "END_BREAKPOINTS") {
@@ -372,6 +394,11 @@ class AsdbgBackend {
                     const int lineNumber = std::stoi(line);
 
                     std::lock_guard<std::mutex> lock{m_breankpointMutex};
+
+                    if (shouldReset) {
+                        m_breankpointList.clear();
+                        shouldReset = false;
+                    }
 
                     m_breankpointList.push_back(
                         Breakpoint{filepath, lineNumber});

@@ -16,3 +16,7 @@ void main() {
     p.y = 0;
     p.move(1, 2);
 }
+
+int getInterestingValue() {
+    return 51;
+}
