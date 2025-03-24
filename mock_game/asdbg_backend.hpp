@@ -258,7 +258,7 @@ class AsdbgBackend {
 
         StartReceiverThread(running);
 
-        ReqestBreakpoints();
+        SendBreakpointsRequest();
     }
 
     void Shutdown() {
@@ -297,12 +297,17 @@ class AsdbgBackend {
         return filename;
     }
 
+    /// @brief Stop at the breakpoint in VSCode and wait for the command from
+    /// the debugger
     ASDBG_NODISCARD
     DebugCommand TriggerBreakpoint(const Breakpoint &bp) {
         std::string request = "STOP\n";
         request += bp.filepath + "," + std::to_string(bp.line) + "\n";
         simple_socket::send_data(m_socket, request.c_str(), request.size());
 
+        SendVariables();
+
+        // Wait for the command from the debugger
         DebugCommand cmd{DebugCommand::Nothing};
         while (true) {
             cmd = m_debugCommand.load();
@@ -325,9 +330,19 @@ class AsdbgBackend {
     std::vector<Breakpoint> m_breankpointList{};
     std::atomic<DebugCommand> m_debugCommand{DebugCommand::Nothing};
 
-    void ReqestBreakpoints() {
-        std::string request = "GET_BREAKPOINTS\n";
-        simple_socket::send_data(m_socket, request.c_str(), request.size());
+    void SendBreakpointsRequest() {
+        std::string send = "GET_BREAKPOINTS\n";
+        simple_socket::send_data(m_socket, send.c_str(), send.size());
+    }
+
+    void SendVariables() {
+        std::string send = "VARIABLES\n";
+        send += "3\n"; // count
+        send += "initial_player_life\n123\n";
+        send += "player_damage\n0xFFE0\n";
+        send += "player_life\n987\n";
+
+        simple_socket::send_data(m_socket, send.c_str(), send.size());
     }
 
     void StartReceiverThread(std::atomic<bool> &running) {

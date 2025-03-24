@@ -14,6 +14,11 @@ interface ScriptBreakpoint {
     line: number;
 }
 
+interface ScriptVariable {
+    name: string;
+    value: string;
+}
+
 export class AsdbgSession extends LoggingDebugSession {
     // ブレイクポイントはファイルパスごとに配列で保持する
     public breakpoints: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
@@ -21,6 +26,8 @@ export class AsdbgSession extends LoggingDebugSession {
     private readonly _clients: net.Socket[] = [];
 
     private _currentBreakpoint: ScriptBreakpoint | undefined;
+
+    private readonly _variables: ScriptVariable[] = [];
 
     public constructor(fileAccessor: any) {
         super('angel-debug.txt', fileAccessor);
@@ -91,7 +98,10 @@ export class AsdbgSession extends LoggingDebugSession {
 
             // クライアントからのデータ受信時
             socket.on('data', (data: Buffer) => {
-                this.handleSocketData(socket, data);
+                const messages = data.toString().split('\n');
+                while (messages.length > 0) {
+                    this.handleSocketData(socket, messages);
+                }
             });
 
             socket.on('end', () => {
@@ -112,20 +122,21 @@ export class AsdbgSession extends LoggingDebugSession {
         console.log('Debug adapter initialized!');
     }
 
-    private handleSocketData(socket: net.Socket, data: Buffer) {
-        const message = data.toString().trim();
-        console.log(`Client says: ${message}`);
-
-        if (message === 'GET_BREAKPOINTS') {
+    private handleSocketData(socket: net.Socket, messages: string[]) {
+        const method = messages.shift();
+        if (method === undefined || method === '') {
+            return;
+        }
+        else if (method === 'GET_BREAKPOINTS') {
             // ブレイクポイント要求時、現在のブレイクポイント情報を送信
             this.sendBreakpoints(socket);
-        } else if (message.startsWith('STOP')) {
+        } else if (method === 'STOP') {
             // ```
             // STOP
             // filepath,line
             // ```
-            const secondLine = message.split('\n')[1];
-            const [filepath, line] = secondLine?.split(',');
+            const nextMessage = messages.shift();
+            const [filepath, line] = nextMessage ? nextMessage.split(',') : [undefined, undefined];
             const lineNumber = line !== undefined ? parseInt(line, 10) : undefined;
             if (filepath === undefined || lineNumber === undefined) {
                 console.log('Invalid STOP message received.');
@@ -140,8 +151,32 @@ export class AsdbgSession extends LoggingDebugSession {
             // Send message for VSCode to stop at the breakpoint
             this.sendEvent(new StoppedEvent('breakpoint', mainThreadId));
         }
-        else {
-            console.log('Unknown message received.');
+        else if (method === 'VARIABLES') {
+            // ```
+            // VARIABLES
+            // 2
+            // variable_name_1
+            // 123
+            // variable_name_2
+            // 456
+            // ```
+            this._variables.length = 0; // clear
+            const count = parseInt(messages.shift() ?? '0', 10);
+            for (let i = 0; i < count; i++) {
+                const name = messages.shift();
+                const value = messages.shift();
+                if (name === undefined || value === undefined) {
+                    console.log('Invalid VARIABLES message received.');
+                    break;
+                }
+
+                this._variables.push({
+                    name: name,
+                    value: value
+                });
+            }
+        } else {
+            console.log('Unknown message received: ' + method);
         }
     }
 
@@ -271,14 +306,13 @@ export class AsdbgSession extends LoggingDebugSession {
 
     protected variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments, request?: DebugProtocol.Request): void {
         response.body = {
-            variables: [
-                {
-                    name: "player_life",
-                    value: "987",
-                    type: "int",
-                    variablesReference: 500 // FIXME
-                }
-            ]
+            variables: this._variables.map((v, i) => {
+                return {
+                    name: v.name,
+                    value: v.value,
+                    variablesReference: 2000 + i // FIXME
+                };
+            })
         };
 
         this.sendResponse(response);

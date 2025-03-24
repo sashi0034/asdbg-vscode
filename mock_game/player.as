@@ -8,6 +8,7 @@ class Player {
     }
 }
 
+// This is a mock program.
 void main() {
     int initial_player_life = 10;
     int player_damage = 3;
