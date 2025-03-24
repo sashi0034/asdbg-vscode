@@ -7,7 +7,7 @@
             "command": "cmd",
             "args": [
                 "/c",
-                "g++ mock_engine.cpp -static-libstdc++ -static-libgcc -lws2_32 -g -o mock_engine.exe && mock_engine.exe"
+                "g++ mock_engine.cpp -static-libstdc++ -static-libgcc -Langelscript/angelscript/lib -langelscript -lws2_32 -g -o mock_engine.exe && mock_engine.exe"
             ],
             "group": {
                 "kind": "build",
@@ -25,6 +25,8 @@
                 "mock_engine.cpp",
                 "-static-libstdc++",
                 "-static-libgcc",
+                "-Langelscript/angelscript/lib",
+                "-langelscript",
                 "-lws2_32",
                 "-g",
                 "-o",

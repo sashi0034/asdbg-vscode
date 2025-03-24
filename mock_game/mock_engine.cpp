@@ -6,6 +6,8 @@
 
 #include "asdbg_backend.hpp"
 
+#include "angelscript/angelscript/include/angelscript.h"
+
 namespace {
 asdbg::AsdbgBackend g_asdbg{};
 asdbg::DebugCommand g_previousCommand{};
@@ -56,7 +58,11 @@ void MockScriptEngine() {
 } // namespace
 
 int main() {
-    std::cout << "Mock engine started!\n";
+    std::cout << "Mock engine started!\n"
+              << "AngelScript version: " << ANGELSCRIPT_VERSION_STRING
+              << std::endl;
+
+    asIScriptEngine *engine = asCreateScriptEngine();
 
     std::atomic<bool> running{true};
     g_asdbg.Start(running);
@@ -69,6 +75,10 @@ int main() {
     // Finish the engine
     running = false;
     g_asdbg.Shutdown();
+
+    if (engine) {
+        engine->ShutDownAndRelease();
+    }
 
     return 0;
 }
