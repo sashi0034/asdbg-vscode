@@ -6,7 +6,7 @@ This experimental project is based on [vscode-mock-debug](https://github.com/mic
 
 - Run the mock engine and hit breakpoints set in script files
 - Display values of placeholder variables
-- Support for Step Over, Continue, etc.
+- Support for Step Over, Continue
 
 ![screenshot](image.png)
 
@@ -23,12 +23,12 @@ This experimental project is based on [vscode-mock-debug](https://github.com/mic
 4. Run the program:
    `./mock_engine.exe`
 
-TODO
+# TODO
 - Support execution in actual AngelScript
 - Display variable values correctly
 - Properly implement features like Step In
 
-Goal
+# Goal
 - Embed into the Language Server
 - Provide a user-friendly, header-only library `asdbg_backend.hpp` for easy integration
   - Ideally support C++11 and make it compatible with any platform
