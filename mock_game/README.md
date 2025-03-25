@@ -14,7 +14,6 @@ make
 or
 
 ```bat
-g++ mock_engine.cpp -static-libstdc++ -static-libgcc -Langelscript\angelscript\lib -langelscript -lws2_32 -g -o mock_engine.exe
-./mock_engine.exe
+make
 ```
 

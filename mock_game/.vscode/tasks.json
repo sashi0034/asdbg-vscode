@@ -4,11 +4,8 @@
         {
             "label": "build & run mock_engine",
             "type": "shell",
-            "command": "cmd",
-            "args": [
-                "/c",
-                "g++ mock_engine.cpp -static-libstdc++ -static-libgcc -Langelscript/angelscript/lib -langelscript -lws2_32 -g -o mock_engine.exe && mock_engine.exe"
-            ],
+            "command": "make",
+            "args": ["run"],
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -20,22 +17,9 @@
         {
             "label": "build mock_engine",
             "type": "shell",
-            "command": "g++",
-            "args": [
-                "mock_engine.cpp",
-                "-static-libstdc++",
-                "-static-libgcc",
-                "-Langelscript/angelscript/lib",
-                "-langelscript",
-                "-lws2_32",
-                "-g",
-                "-o",
-                "mock_engine.exe"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "command": "make",
+            "args": [],
+            "group": "build",
             "problemMatcher": [
                 "$gcc"
             ]

@@ -8,6 +8,11 @@
 
 #include "angelscript/angelscript/include/angelscript.h"
 
+#include "angelscript/add_on/scriptarray/scriptarray.h"
+#include "angelscript/add_on/scriptbuilder/scriptbuilder.h"
+#include "angelscript/add_on/scriptdictionary/scriptdictionary.h"
+#include "angelscript/add_on/scriptstdstring/scriptstdstring.h"
+
 namespace {
 asdbg::AsdbgBackend g_asdbg{};
 asdbg::DebugCommand g_previousCommand{};
@@ -38,7 +43,8 @@ void LineCallback() {
     }
 }
 
-void MockScriptEngine() {
+void MockScriptLoop() {
+
     while (g_frameCount < 10 * 10) {
         g_frameCount++;
 
@@ -55,6 +61,13 @@ void MockScriptEngine() {
                   << ", Script line: " << g_scriptLine << "\n";
     }
 }
+
+void ScriptSleep(int ms) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+
+void ScriptPrintln(const std::string &msg) { std::cout << msg << std::endl; }
+
 } // namespace
 
 int main() {
@@ -64,11 +77,39 @@ int main() {
 
     asIScriptEngine *engine = asCreateScriptEngine();
 
-    std::atomic<bool> running{true};
-    g_asdbg.Start(running);
+    RegisterStdString(engine);
+    RegisterScriptArray(engine, true);
+    RegisterScriptDictionary(engine);
 
-    // Run the mock script engine
-    MockScriptEngine();
+    engine->RegisterGlobalFunction("void println(const string& in message)",
+                                   asFUNCTION(ScriptPrintln), asCALL_CDECL);
+    engine->RegisterGlobalFunction("void sleep(int ms)",
+                                   asFUNCTION(ScriptSleep), asCALL_CDECL);
+
+    // -----------------------------------------------
+
+    std::atomic<bool> running{true};
+    // g_asdbg.Start(running); // TODO
+
+    // -----------------------------------------------
+
+    CScriptBuilder builder{};
+    builder.StartNewModule(engine, "lazy");
+    builder.AddSectionFromFile("lazy.as");
+    if (builder.BuildModule() != asSUCCESS) {
+        std::cerr << "Failed to build the script module!\n";
+        return 1;
+    }
+
+    asIScriptFunction *scriptMain =
+        builder.GetModule()->GetFunctionByDecl("void main()");
+    asIScriptContext *ctx = engine->CreateContext();
+
+    ctx->Prepare(scriptMain);
+    ctx->Execute();
+    ctx->Release();
+
+    // -----------------------------------------------
 
     std::cout << "Mock engine finished!\n";
 
