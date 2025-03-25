@@ -17,48 +17,32 @@ namespace {
 asdbg::AsdbgBackend g_asdbg{};
 asdbg::DebugCommand g_previousCommand{};
 
-std::string g_filename{"player.as"}; // This is not loaded, just a mock
-int g_scriptLine{1};
 int g_frameCount{};
 
-void LineCallback() {
+void LineCallback(asIScriptContext *ctx) {
+    const char *filename{};
+    const auto lineNumber = ctx->GetLineNumber(0, nullptr, &filename);
+
+    std::cout << filename << "\n";
+
     if (g_previousCommand == asdbg::DebugCommand::StepOver) {
-        const auto filepath = g_asdbg.GetAbsolutePath(g_filename);
-        g_previousCommand = g_asdbg.TriggerBreakpoint(
-            asdbg::Breakpoint{filepath, g_scriptLine});
+        const auto filepath = g_asdbg.GetAbsolutePath(filename);
+        g_previousCommand =
+            g_asdbg.TriggerBreakpoint(asdbg::Breakpoint{filepath, lineNumber});
     }
 
     if (g_previousCommand == asdbg::DebugCommand::StepIn) {
         // FIXME: Implement step in (This is same as step over for now)
-        const auto filepath = g_asdbg.GetAbsolutePath(g_filename);
-        g_previousCommand = g_asdbg.TriggerBreakpoint(
-            asdbg::Breakpoint{filepath, g_scriptLine});
+        const auto filepath = g_asdbg.GetAbsolutePath(filename);
+        g_previousCommand =
+            g_asdbg.TriggerBreakpoint(asdbg::Breakpoint{filepath, lineNumber});
     }
 
-    if (const auto bp = g_asdbg.FindBreakpoint(g_filename, g_scriptLine)) {
-        std::cout << "Breakpoint hit: " << g_filename << ", " << g_scriptLine
+    if (const auto bp = g_asdbg.FindBreakpoint(filename, lineNumber)) {
+        std::cout << "Breakpoint hit: " << filename << ", " << lineNumber
                   << "\n";
 
         g_previousCommand = g_asdbg.TriggerBreakpoint(*bp);
-    }
-}
-
-void MockScriptLoop() {
-
-    while (g_frameCount < 10 * 10) {
-        g_frameCount++;
-
-        g_scriptLine++;
-
-        LineCallback();
-
-        if (g_scriptLine > 20) {
-            g_scriptLine = 5;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        std::cout << "Frame: " << g_frameCount
-                  << ", Script line: " << g_scriptLine << "\n";
     }
 }
 
@@ -89,7 +73,7 @@ int main() {
     // -----------------------------------------------
 
     std::atomic<bool> running{true};
-    // g_asdbg.Start(running); // TODO
+    g_asdbg.Start(running);
 
     // -----------------------------------------------
 
@@ -104,6 +88,8 @@ int main() {
     asIScriptFunction *scriptMain =
         builder.GetModule()->GetFunctionByDecl("void main()");
     asIScriptContext *ctx = engine->CreateContext();
+
+    ctx->SetLineCallback(asFUNCTION(LineCallback), nullptr, asCALL_CDECL);
 
     ctx->Prepare(scriptMain);
     ctx->Execute();

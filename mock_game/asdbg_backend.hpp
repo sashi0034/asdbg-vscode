@@ -228,6 +228,41 @@ class MessageQueue {
     std::vector<string_view> m_lines;
     size_t m_pos;
 };
+
+bool AreSameFiles(string_view lhs, string_view rhs) {
+    // TODO: Compare absolute path
+    int l = static_cast<int>(lhs.size()) - 1;
+    int r = static_cast<int>(rhs.size()) - 1;
+
+    while (l >= 0 && r >= 0) {
+        char cl = lhs[l];
+        char cr = rhs[r];
+
+        if (cl == '/' || cl == '\\')
+            break;
+
+        if (cr == '/' || cr == '\\')
+            break;
+
+        const auto lowerL = std::tolower(static_cast<unsigned char>(cl));
+        const auto lowerR = std::tolower(static_cast<unsigned char>(cr));
+
+        if (lowerL != lowerR) {
+            return false;
+        }
+
+        --l;
+        --r;
+    }
+
+    if ((l >= 0 && lhs[l] != '/' && lhs[l] != '\\') ||
+        (r >= 0 && rhs[r] != '/' && rhs[r] != '\\')) {
+        return false;
+    }
+
+    return true;
+}
+
 } // namespace detail
 
 // -----------------------------------------------
@@ -270,13 +305,13 @@ class AsdbgBackend {
 
     /// @return Breakpoint if found, otherwise nullptr
     ASDBG_NODISCARD
-    const Breakpoint *FindBreakpoint(const std::string &filename, int line) {
+    const Breakpoint *FindBreakpoint(const std::string &filepath, int line) {
         std::lock_guard<std::mutex> lock{m_breankpointMutex};
 
         for (const auto &bp : m_breankpointList) {
             if (bp.line == line &&
-                detail::EndWith(bp.filepath,
-                                filename) // FIXME: Consider relative paths
+                detail::AreSameFiles(bp.filepath,
+                                     filepath) // TODO: Compare absolute path
             ) {
                 return &bp;
             }
